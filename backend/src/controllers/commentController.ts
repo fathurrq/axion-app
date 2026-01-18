@@ -3,13 +3,13 @@ import prisma from '../config/database.js';
 
 export const createComment = async (req: Request, res: Response) => {
   try {
-    const { taskId, userId, content } = req.body;
+    const { taskId, userId, content, body } = req.body;
 
     const comment = await prisma.comment.create({
       data: {
         taskId,
         userId,
-        content
+        content: content || body // Frontend sends 'body'
       },
       include: {
         user: true

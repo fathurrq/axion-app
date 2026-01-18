@@ -7,13 +7,17 @@ export const createTask = async (req: Request, res: Response) => {
     const { 
       title, 
       description, 
-      organizationId, 
+      orgId, // Frontend sends orgId
+      organizationId, // Fallback
       assigneeId, 
       createdBy, 
       priority, 
       dueDate,
-      projectId // Optional: if created directly within a project
+      projectId,
+      collaboratorIds = []
     } = req.body;
+
+    const finalOrgId = organizationId || orgId;
 
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Create the task itself
@@ -21,7 +25,7 @@ export const createTask = async (req: Request, res: Response) => {
         data: {
           title,
           description,
-          organizationId,
+          organizationId: finalOrgId,
           assigneeId,
           createdBy,
           priority,
@@ -47,7 +51,17 @@ export const createTask = async (req: Request, res: Response) => {
         });
       }
 
-      // 3. Create activity log
+      // 3. Add collaborators
+      if (collaboratorIds && collaboratorIds.length > 0) {
+        await tx.taskCollaborator.createMany({
+          data: collaboratorIds.map((userId: string) => ({
+            taskId: task.id,
+            userId
+          }))
+        });
+      }
+
+      // 4. Create activity log
       await tx.activityLog.create({
         data: {
           entityType: 'task',
@@ -62,51 +76,93 @@ export const createTask = async (req: Request, res: Response) => {
     });
 
     res.status(201).json(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create task' });
+  } catch (error: any) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ 
+      error: 'Failed to create task',
+      details: error.message 
+    });
   }
 };
 
 export const updateTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, status, priority, assigneeId, dueDate, userId } = req.body; // userId is the actor
+    const { 
+      title, description, status, priority, assigneeId, dueDate, userId, 
+      collaboratorIds 
+    } = req.body; 
 
     const existingTask = await prisma.task.findUnique({ where: { id } });
     if (!existingTask) return res.status(404).json({ error: 'Task not found' });
 
-    const updatedTask = await prisma.task.update({
-      where: { id },
-      data: {
-        title,
-        description,
-        status,
-        priority,
-        assigneeId,
-        dueDate: dueDate ? new Date(dueDate) : (dueDate === null ? null : undefined)
-      }
-    });
-
-    // Log the change
-    if (userId) {
-       await prisma.activityLog.create({
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedTask = await tx.task.update({
+        where: { id },
         data: {
-          entityType: 'task',
-          entityId: id,
-          userId,
-          action: 'update_task',
-          metadata: {
-            old: existingTask,
-            new: updatedTask
-          }
+          title,
+          description,
+          status,
+          priority,
+          assigneeId,
+          dueDate: dueDate ? new Date(dueDate) : (dueDate === null ? null : undefined)
         }
       });
-    }
 
-    res.json(updatedTask);
+      // Update collaborators if provided
+      if (collaboratorIds !== undefined) {
+        // Delete existing
+        await tx.taskCollaborator.deleteMany({ where: { taskId: id } });
+        // Insert new
+        if (collaboratorIds.length > 0) {
+          await tx.taskCollaborator.createMany({
+            data: collaboratorIds.map((uid: string) => ({
+              taskId: id,
+              userId: uid
+            }))
+          });
+        }
+      }
+
+      // Log the change
+      if (userId) {
+         await tx.activityLog.create({
+          data: {
+            entityType: 'task',
+            entityId: id,
+            userId,
+            action: 'update_task',
+            metadata: {
+              old: existingTask,
+              new: updatedTask
+            }
+          }
+        });
+      }
+
+      return updatedTask;
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: 'Failed to update task', details: error.message });
+  }
+};
+
+export const deleteTask = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Soft delete
+    await prisma.task.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+
+    res.status(204).send();
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update task' });
+    res.status(500).json({ error: 'Failed to delete task' });
   }
 };
 

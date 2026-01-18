@@ -122,3 +122,35 @@ export const getProjectTasks = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch project tasks' });
   }
 };
+
+export const updateProject = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    const project = await prisma.project.update({
+      where: { id },
+      data: { name }
+    });
+
+    res.json(project);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update project' });
+  }
+};
+
+export const deleteProject = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Soft delete
+    await prisma.project.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+};
