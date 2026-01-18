@@ -29,16 +29,20 @@ export const getProjects = async (req: Request, res: Response) => {
 
 export const createProject = async (req: Request, res: Response) => {
   try {
-    const { name, organizationId } = req.body;
+    const { name, orgId } = req.body; // Frontend sends 'orgId'
     const project = await prisma.project.create({
       data: {
         name,
-        organizationId
+        organizationId: orgId
       }
     });
     res.status(201).json(project);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create project' });
+  } catch (error: any) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ 
+      error: 'Failed to create project',
+      details: error.message 
+    });
   }
 };
 
@@ -74,5 +78,47 @@ export const getProjectById = async (req: Request, res: Response) => {
     res.json(project);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch project' });
+  }
+};
+
+export const getProjectTasks = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // projectId
+    const { status, assigneeId, priority, q } = req.query;
+
+    const where: any = {
+      projectId: String(id),
+      task: {
+        deletedAt: null
+      }
+    };
+
+    if (status) where.task.status = String(status);
+    if (priority) where.task.priority = String(priority);
+    if (assigneeId) where.task.assigneeId = String(assigneeId);
+    if (q) {
+      where.task.title = { contains: String(q), mode: 'insensitive' };
+    }
+
+    const projectTasks = await prisma.projectTask.findMany({
+      where,
+      include: {
+        task: {
+          include: {
+            assignee: true,
+            collaborators: { include: { user: true } },
+            projects: { include: { project: true } }
+          }
+        }
+      },
+      orderBy: { position: 'asc' }
+    });
+
+    // Map back to Task[]
+    const tasks = projectTasks.map(pt => pt.task);
+
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch project tasks' });
   }
 };

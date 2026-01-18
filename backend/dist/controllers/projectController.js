@@ -25,17 +25,21 @@ export const getProjects = async (req, res) => {
 };
 export const createProject = async (req, res) => {
     try {
-        const { name, organizationId } = req.body;
+        const { name, orgId } = req.body; // Frontend sends 'orgId'
         const project = await prisma.project.create({
             data: {
                 name,
-                organizationId
+                organizationId: orgId
             }
         });
         res.status(201).json(project);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to create project' });
+        console.error('Error creating project:', error);
+        res.status(500).json({
+            error: 'Failed to create project',
+            details: error.message
+        });
     }
 };
 export const getProjectById = async (req, res) => {
@@ -69,5 +73,45 @@ export const getProjectById = async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to fetch project' });
+    }
+};
+export const getProjectTasks = async (req, res) => {
+    try {
+        const { id } = req.params; // projectId
+        const { status, assigneeId, priority, q } = req.query;
+        const where = {
+            projectId: String(id),
+            task: {
+                deletedAt: null
+            }
+        };
+        if (status)
+            where.task.status = String(status);
+        if (priority)
+            where.task.priority = String(priority);
+        if (assigneeId)
+            where.task.assigneeId = String(assigneeId);
+        if (q) {
+            where.task.title = { contains: String(q), mode: 'insensitive' };
+        }
+        const projectTasks = await prisma.projectTask.findMany({
+            where,
+            include: {
+                task: {
+                    include: {
+                        assignee: true,
+                        collaborators: { include: { user: true } },
+                        projects: { include: { project: true } }
+                    }
+                }
+            },
+            orderBy: { position: 'asc' }
+        });
+        // Map back to Task[]
+        const tasks = projectTasks.map(pt => pt.task);
+        res.json(tasks);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to fetch project tasks' });
     }
 };

@@ -132,3 +132,30 @@ export const getTaskById = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch task' });
   }
 };
+
+export const getMyTasks = async (req: Request, res: Response) => {
+  try {
+    const { orgId, userId } = req.query;
+    if (!orgId || !userId) {
+      return res.status(400).json({ error: 'orgId and userId are required' });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        organizationId: String(orgId),
+        assigneeId: String(userId),
+        deletedAt: null
+      },
+      include: {
+        projects: { include: { project: true } },
+        assignee: true,
+        collaborators: { include: { user: true } }
+      },
+      orderBy: { createdAt: 'desc' } // Simplified sort for now
+    });
+    
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch my tasks' });
+  }
+};
