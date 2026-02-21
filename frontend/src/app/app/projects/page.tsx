@@ -12,7 +12,7 @@ import type { Project } from '@/types';
 
 export default function ProjectsPage() {
     const router = useRouter();
-    const { activeOrgId } = useApp();
+    const { activeOrgId, isInitialSyncComplete } = useApp();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -20,12 +20,14 @@ export default function ProjectsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
+        if (!isInitialSyncComplete) return;
+
         if (!activeOrgId) {
             router.push('/app/onboarding/org');
             return;
         }
         loadProjects();
-    }, [activeOrgId, router]);
+    }, [activeOrgId, router, isInitialSyncComplete]);
 
     const loadProjects = async () => {
         if (!activeOrgId) return;

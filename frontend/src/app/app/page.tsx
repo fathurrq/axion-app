@@ -17,7 +17,7 @@ type FilterType = 'all' | 'due_soon' | 'overdue' | 'high_priority';
 
 export default function HomePage() {
     const router = useRouter();
-    const { activeOrgId, currentUser } = useApp();
+    const { activeOrgId, currentUser, isInitialSyncComplete } = useApp();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -27,12 +27,14 @@ export default function HomePage() {
     const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
 
     useEffect(() => {
+        if (!isInitialSyncComplete) return;
+
         if (!activeOrgId) {
             router.push('/app/onboarding/org');
             return;
         }
         loadData();
-    }, [activeOrgId, currentUser, router]);
+    }, [activeOrgId, currentUser, router, isInitialSyncComplete]);
 
     const loadData = async () => {
         if (!activeOrgId || !currentUser) return; // Wait for user

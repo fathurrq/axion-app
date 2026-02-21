@@ -13,7 +13,7 @@ import { getStatusLabel, getPriorityLabel, formatDate, getInitials } from '@/lib
 export default function TaskDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { activeOrgId, currentUser } = useApp();
+    const { activeOrgId, currentUser, isInitialSyncComplete } = useApp();
     const taskId = params.taskId as string;
 
     const [task, setTask] = useState<Task | null>(null);
@@ -23,12 +23,14 @@ export default function TaskDetailPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
+        if (!isInitialSyncComplete) return;
+
         if (!activeOrgId) {
             router.push('/app/onboarding/org');
             return;
         }
         loadData();
-    }, [activeOrgId, taskId, router]);
+    }, [activeOrgId, taskId, router, isInitialSyncComplete]);
 
     const loadData = async () => {
         if (!activeOrgId) return;

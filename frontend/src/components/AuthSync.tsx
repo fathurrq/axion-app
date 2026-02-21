@@ -7,12 +7,18 @@ import { apiClient } from "@/lib/api-client";
 
 export default function AuthSync() {
     const { user, isLoading } = useUser();
-    const { setCurrentUser, setOrganizations, setActiveOrgId, activeOrgId } = useApp();
+    const { setCurrentUser, setOrganizations, setActiveOrgId, activeOrgId, setIsInitialSyncComplete } = useApp();
     const hasSynced = useRef(false);
 
     useEffect(() => {
         const syncUser = async () => {
-            if (isLoading || !user || hasSynced.current) return;
+            if (isLoading || hasSynced.current) return;
+
+            if (!user) {
+                // If there is no user, still mark sync as complete so the app stops loading
+                setIsInitialSyncComplete(true);
+                return;
+            }
 
             try {
                 // Sync user with backend
@@ -44,7 +50,9 @@ export default function AuthSync() {
                     setOrganizations(orgsResult.data);
 
                     // Set active org if not already set
-                    if (!activeOrgId && orgsResult.data.length > 0) {
+                    // Also check if no active org is set in local storage
+                    const savedOrgId = localStorage.getItem('activeOrgId');
+                    if (!savedOrgId && orgsResult.data.length > 0) {
                         setActiveOrgId(orgsResult.data[0].id);
                     }
                 }
@@ -52,11 +60,13 @@ export default function AuthSync() {
                 hasSynced.current = true;
             } catch (error) {
                 console.error('Error syncing user:', error);
+            } finally {
+                setIsInitialSyncComplete(true);
             }
         };
 
         syncUser();
-    }, [user, isLoading]);
+    }, [user, isLoading, setCurrentUser, setOrganizations, setActiveOrgId, setIsInitialSyncComplete]);
 
     return null; // This component doesn't render anything
 }

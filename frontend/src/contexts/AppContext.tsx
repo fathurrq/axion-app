@@ -10,6 +10,8 @@ interface AppContextType {
     setOrganizations: (orgs: Organization[]) => void;
     currentUser: User | null;
     setCurrentUser: (user: User | null) => void;
+    isInitialSyncComplete: boolean;
+    setIsInitialSyncComplete: (val: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -18,6 +20,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const [activeOrgId, setActiveOrgIdState] = useState<string | null>(null);
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isInitialSyncComplete, setIsInitialSyncComplete] = useState<boolean>(false);
 
     // Load active org from localStorage
     useEffect(() => {
@@ -46,6 +49,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 setOrganizations,
                 currentUser,
                 setCurrentUser,
+                isInitialSyncComplete,
+                setIsInitialSyncComplete,
             }}
         >
             {children}

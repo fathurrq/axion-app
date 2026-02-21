@@ -14,7 +14,7 @@ import type { Task, Project, User, TaskStatus, TaskPriority } from '@/types';
 export default function ProjectDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { activeOrgId, currentUser } = useApp();
+    const { activeOrgId, currentUser, isInitialSyncComplete } = useApp();
     const projectId = params.projectId as string;
 
     const [project, setProject] = useState<Project | null>(null);
@@ -28,12 +28,14 @@ export default function ProjectDetailPage() {
     const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
 
     useEffect(() => {
+        if (!isInitialSyncComplete) return;
+
         if (!activeOrgId) {
             router.push('/app/onboarding/org');
             return;
         }
         loadData();
-    }, [activeOrgId, projectId, router]);
+    }, [activeOrgId, projectId, router, isInitialSyncComplete]);
 
     const loadData = async () => {
         if (!activeOrgId) return;
