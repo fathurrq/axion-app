@@ -51,7 +51,6 @@ export default function HomePage() {
         if (usersResult.data) setUsers(usersResult.data);
         setIsLoading(false);
     };
-
     const handleCreateTask = async (data: TaskFormData) => {
         if (!activeOrgId || !currentUser) return;
 

@@ -41,26 +41,29 @@ export default function ProjectDetailPage() {
         if (!activeOrgId) return;
 
         setIsLoading(true);
-        const [tasksResult, usersResult] = await Promise.all([
+        const [tasksResult, projectResult, usersResult] = await Promise.all([
             apiClient.getProjectTasks(projectId, {
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 assigneeId: assigneeFilter !== 'anyone' ? assigneeFilter : undefined,
                 priority: priorityFilter !== 'all' ? priorityFilter : undefined,
                 q: searchQuery || undefined,
             }),
+            apiClient.getProject(projectId),
             apiClient.getOrgMembers(activeOrgId),
         ]);
 
         if (tasksResult.data) {
             setTasks(tasksResult.data);
-            // Get project name from first task if available
-            if (tasksResult.data.length > 0 && tasksResult.data[0].projects?.[0]?.project) {
-                setProject(tasksResult.data[0].projects[0].project);
-            }
         }
+
+        if (projectResult.data) {
+            setProject(projectResult.data);
+        }
+
         if (usersResult.data) setUsers(usersResult.data);
         setIsLoading(false);
     };
+
 
     const handleCreateTask = async (data: TaskFormData) => {
         if (!activeOrgId || !currentUser) return;

@@ -72,6 +72,10 @@ class ApiClient {
     return this.request<Project[]>(`/api/projects?orgId=${orgId}`);
   }
 
+  async getProject(projectId: string): Promise<ApiResponse<Project>> {
+    return this.request<Project>(`/api/projects/${projectId}`);
+  }
+
   async createProject(data: CreateProjectRequest): Promise<ApiResponse<Project>> {
     return this.request<Project>('/api/projects', {
       method: 'POST',
