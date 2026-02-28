@@ -5,7 +5,7 @@ const router = Router();
 
 router.post('/', createTask);
 router.get('/my', getMyTasks);
-router.put('/:id', updateTask);
+router.patch('/:id', updateTask);
 router.delete('/:id', deleteTask);
 router.get('/:id', getTaskById);
 
